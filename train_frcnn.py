@@ -8,41 +8,43 @@ from torch.utils.data import DataLoader
 from torchvision.transforms import v2 as T
 from PIL import Image
 
-# 1. Custom Dataset class to handle COCO format for Faster R-CNN
+# 1. CUSTOM DATASET CLASS: Handles COCO-formatted annotations for Faster R-CNN
 class CocoDataset(CocoDetection):
     def __init__(self, root, annFile, transforms=None):
+        # Initialize the COCO dataset by calling the parent class constructor
         super(CocoDataset, self).__init__(root, annFile)
         self._transforms = transforms
 
     def __getitem__(self, idx):
-        # CocoDetection returns (image, list of annotations)
+        # Retrieve the image and raw COCO target (list of dictionaries)
         img, target = super(CocoDataset, self).__getitem__(idx)
         
-        # Pre-process the target for Faster R-CNN format
-        image_id = torch.tensor([idx])
-        boxes = []
-        labels = []
-        areas = []
-        iscrowd = []
+        image_id = torch.tensor([idx]) # Every image must have a unique ID
+        boxes = [] # Initialize list for bounding box coordinates
+        labels = [] # Initialize list for class labels
+        areas = [] # Initialize list for object areas
+        iscrowd = [] # Initialize list for crowd information (for COCO standard)
         
         for ann in target:
-            # COCO bbox: [xmin, ymin, width, height]
-            # Faster R-CNN expects: [xmin, ymin, xmax, ymax]
+            # COCO bbox format is [xmin, ymin, width, height]
+            # Faster R-CNN requires absolute coordinates: [xmin, ymin, xmax, ymax]
             x, y, w, h = ann['bbox']
             
-            # Filter out invalid boxes (zero area or negative values)
+            # Skip invalid or corrupted annotations (zero width or height)
             if w <= 0 or h <= 0:
                 continue
                 
+            # Convert to absolute [xmin, ymin, xmax, ymax] format
             boxes.append([x, y, x + w, y + h])
             
-            # Faster R-CNN: 0 is background. Labels are 1-based (cat_id + 1).
+            # Label 0 is reserved for background in Faster R-CNN
+            # So we shift all IDs up by 1 (cat_id 0 becomes label 1)
             labels.append(ann['category_id'] + 1)
-            areas.append(ann['area'])
-            iscrowd.append(ann['iscrowd'])
+            areas.append(ann['area']) # Useful for performance metrics
+            iscrowd.append(ann['iscrowd']) # Marks if objects are overlapping in a crowd
 
-        # If no objects, create a dummy box to avoid crashes (common in training)
-        if len(boxes) == 0:
+        # Convert the Python lists into PyTorch tensors (the format the GPU uses)
+        if len(boxes) == 0: # Handle cases with no objects to avoid training errors
             boxes = torch.zeros((0, 4), dtype=torch.float32)
             labels = torch.zeros((0,), dtype=torch.int64)
             areas = torch.zeros((0,), dtype=torch.float32)
@@ -53,6 +55,7 @@ class CocoDataset(CocoDetection):
             areas = torch.as_tensor(areas, dtype=torch.float32)
             iscrowd = torch.as_tensor(iscrowd, dtype=torch.int64)
 
+        # Assemble the dictionary in the exact format required by Torchvision's Faster R-CNN
         target = {
             'boxes': boxes,
             'labels': labels,
@@ -61,93 +64,100 @@ class CocoDataset(CocoDetection):
             'iscrowd': iscrowd
         }
 
+        # Apply image transformations (normalization, scaling)
         if self._transforms is not None:
             img = self._transforms(img)
 
         return img, target
 
-# 2. Basic Transformations
+# 2. IMAGE TRANSFORMS: Prepares raw images for the neural network
 def get_transform():
     return T.Compose([
-        T.ToImage(),
-        T.ToDtype(torch.float32, scale=True),
+        T.ToImage(), # Convert PIL image to PyTorch Image object
+        T.ToDtype(torch.float32, scale=True), # Normalize pixel values to 0.0 - 1.0
     ])
 
-# 3. Training Loop
+# 3. EPOCH TRAINING: Processes one full pass of the data
 def train_one_epoch(model, optimizer, data_loader, device, epoch):
-    model.train()
-    header = f'Epoch: [{epoch}]'
-    
+    model.train() # Put the model in training mode (enables gradient tracking)
     total_loss = 0
+    
+    # Process the images in batches
     for images, targets in data_loader:
+        # Transfer both images and labels to the GPU
         images = list(image.to(device) for image in images)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
+        # Calculate the four types of loss (Classification, Bbox, RPN Bbox, RPN Objectness)
         loss_dict = model(images, targets)
-        losses = sum(loss for loss in loss_dict.values())
+        losses = sum(loss for loss in loss_dict.values()) # Sum all losses
 
-        optimizer.zero_grad()
-        losses.backward()
-        optimizer.step()
+        # BACKPROPAGATION: The core of the learning process
+        optimizer.zero_grad() # Clear any previous gradients
+        losses.backward() # Compute new gradients based on current loss
+        optimizer.step() # Update model weights to reduce the loss
         
         total_loss += losses.item()
         
-    print(f"{header} - Average Loss: {total_loss / len(data_loader):.4f}")
+    print(f"Epoch: [{epoch}] - Average Loss: {total_loss / len(data_loader):.4f}")
 
 def main():
-    # Setup Device
+    # Detect if NVIDIA CUDA is available (Optimized for your 3070 Ti)
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     print(f"Using device: {device}")
 
-    # Dataset and DataLoader
-    # Note: Using your renamed 'coco_dataset' folder
+    # Initialize the dataset using the COCO-formatted folder we set up
     dataset = CocoDataset(
         root='coco_dataset/images',
         annFile='coco_dataset/result.json',
         transforms=get_transform()
     )
     
-    # collate_fn is needed because images have different numbers of objects
+    # Custom collate function needed because each image has a different number of boxes
     def collate_fn(batch):
         return tuple(zip(*batch))
 
+    # DataLoader handles shuffling the data and feeding it in small batches
     data_loader = DataLoader(
         dataset, 
-        batch_size=4, 
+        batch_size=4, # Set to 4 to save memory; can be increased to 8 or 12 on 3070 Ti
         shuffle=True, 
         num_workers=0, 
         collate_fn=collate_fn
     )
 
-    # Load pre-trained Faster R-CNN with ResNet-50 FPN backbone
-    print("Loading pre-trained Faster R-CNN...")
+    # LOAD MODEL: Start with a ResNet-50 Faster R-CNN model pretrained on COCO
+    print("Loading pre-trained Faster R-CNN ResNet-50...")
     model = torchvision.models.detection.fasterrcnn_resnet50_fpn(weights="DEFAULT")
 
-    # Replace the box predictor for your 8 classes (+ 1 for background)
-    num_classes = 9  # 8 drinks + 1 background
+    # Replace the output layer to match your 8 specific beverage classes
+    # 9 = 8 Beverages + 1 Background (always needed)
+    num_classes = 9 
     in_features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
     
-    model.to(device)
+    model.to(device) # Move the entire model to the GPU
 
-    # Optimizer & Learning Rate Scheduler
+    # OPTIMIZER: Stochastic Gradient Descent with momentum and weight decay
     params = [p for p in model.parameters() if p.requires_grad]
     optimizer = torch.optim.SGD(params, lr=0.005, momentum=0.9, weight_decay=0.0005)
+    
+    # LEARNING RATE SCHEDULER: Slowly reduces the learning rate to fine-tune results
     lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.1)
 
-    # Training
+    # MAIN TRAINING LOOP: 10 Epochs is a good starting point for transfer learning
     num_epochs = 10
     print(f"Starting training for {num_epochs} epochs...")
     
     for epoch in range(num_epochs):
         train_one_epoch(model, optimizer, data_loader, device, epoch)
-        lr_scheduler.step()
+        lr_scheduler.step() # Update the learning rate
         
-        # Save checkpoint
+        # Save the model state as a checkpoint (move these back to Mac for testing)
         torch.save(model.state_dict(), f"faster_rcnn_epoch_{epoch}.pth")
         print(f"Model saved: faster_rcnn_epoch_{epoch}.pth")
 
-    print("Training complete!")
+    print("Training complete! Your weights (.pth) are ready for testing.")
 
 if __name__ == "__main__":
     main()
