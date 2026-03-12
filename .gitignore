@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+build/
+dist/
+
+# IDEs
+.idea/
+.vscode/
+.DS_Store
+
+# Data & Models (Optional: exclude if they are very large)
+# dataset/
+# coco_dataset/
+*.pth
+*.pt
+*.onnx
+runs/
+
+# Large files
+*.log
+*.sqlite

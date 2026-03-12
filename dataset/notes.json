@@ -1,0 +1,41 @@
+{
+  "categories": [
+    {
+      "id": 0,
+      "name": "Battery Fully Charged Lemon Yuzu"
+    },
+    {
+      "id": 1,
+      "name": "Burn Original"
+    },
+    {
+      "id": 2,
+      "name": "Monster Juiced Aussie Lemonade"
+    },
+    {
+      "id": 3,
+      "name": "Monster Juiced Mango Loco"
+    },
+    {
+      "id": 4,
+      "name": "Monster Juiced Monarch"
+    },
+    {
+      "id": 5,
+      "name": "Monster Ultra Peachy Keen"
+    },
+    {
+      "id": 6,
+      "name": "Monster Ultra Strawberry Dreams"
+    },
+    {
+      "id": 7,
+      "name": "Monster Ultra White"
+    }
+  ],
+  "info": {
+    "year": 2026,
+    "version": "1.0",
+    "contributor": "Label Studio"
+  }
+}
