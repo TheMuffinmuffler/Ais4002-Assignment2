@@ -5,69 +5,63 @@ import os
 
 def run_training(script_name, args, description):
     """
-    Runs a training script and waits for it to complete.
+    Runs a training script from the src folder.
     """
+    script_path = os.path.join("src", script_name)
     print("\n" + "=" * 80)
     print(f" EXPERIMENT: {description}")
-    print(f" COMMAND: {script_name} {' '.join(args)}")
+    print(f" COMMAND: python {script_path} {' '.join(args)}")
     print("=" * 80 + "\n")
     
     start_time = time.time()
     
-    # Use the same python interpreter currently running this script
     try:
-        process = subprocess.Popen([sys.executable, script_name] + args)
-        # Wait for completion
+        # We specify the current directory as the project root so scripts find 'data/' correctly
+        process = subprocess.Popen([sys.executable, script_path] + args)
         process.wait()
         
-        end_time = time.time()
-        duration = (end_time - start_time) / 60
-        
+        duration = (time.time() - start_time) / 60
         if process.returncode == 0:
             print(f"\nSUCCESS: {description} completed in {duration:.2f} minutes.")
         else:
-            print(f"\nERROR: {description} failed with return code {process.returncode}.")
+            print(f"\nERROR: {description} failed.")
     except Exception as e:
-        print(f"\nCRITICAL ERROR running {description}: {str(e)}")
+        print(f"\nCRITICAL ERROR: {str(e)}")
     
-    print("\n" + "#" * 80)
-    print(" WAITING 15 SECONDS FOR GPU/RESOURCE COOLDOWN...")
-    print("#" * 80 + "\n")
-    time.sleep(15)
+    time.sleep(5)
 
 def main():
-    # Define the 4 core experiments
+    # Update paths to point to the new 'data' directory
     experiments = [
-        # --- YOLO EXPERIMENTS ---
         {
             "script": "train_yolo.py",
             "args": ["--data", "data_v1.yaml", "--name", "yolo_v1_small"],
-            "desc": "YOLOv11: BASELINE (Small Dataset v1)"
+            "desc": "YOLOv11: BASELINE (V1)"
         },
         {
             "script": "train_yolo.py",
             "args": ["--data", "data_v2.yaml", "--name", "yolo_v2_large"],
-            "desc": "YOLOv11: SCALED (Large Dataset v2)"
-        },
-        
-        # --- FASTER R-CNN EXPERIMENTS ---
-        {
-            "script": "train_frcnn.py",
-            "args": [
-                "--root", "coco_dataset_v1", 
-                "--ann", "coco_dataset_v1/train.json", 
-                "--name", "frcnn_v1_small"
-            ],
-            "desc": "FASTER R-CNN: BASELINE (Small Dataset v1)"
+            "desc": "YOLOv11: SCALED (V2)"
         },
         {
             "script": "train_frcnn.py",
             "args": [
-                "--root", "coco_dataset_v2", 
-                "--ann", "coco_dataset_v2/train.json", 
-                "--name", "frcnn_v2_large"
+                "--root", os.path.join("data", "coco_dataset_v1"), 
+                "--train_ann", os.path.join("data", "coco_dataset_v1", "train.json"), 
+                "--val_ann", os.path.join("data", "coco_dataset_v1", "val.json"),
+                "--name", "frcnn_v1_validated"
             ],
-            "desc": "FASTER R-CNN: SCALED (Large Dataset v2)"
+            "desc": "FASTER R-CNN: BASELINE (V1)"
+        },
+        {
+            "script": "train_frcnn.py",
+            "args": [
+                "--root", os.path.join("data", "coco_dataset_v2"), 
+                "--train_ann", os.path.join("data", "coco_dataset_v2", "train.json"), 
+                "--val_ann", os.path.join("data", "coco_dataset_v2", "val.json"),
+                "--name", "frcnn_v2_validated"
+            ],
+            "desc": "FASTER R-CNN: SCALED (V2)"
         }
     ]
 

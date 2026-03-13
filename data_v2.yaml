@@ -1,4 +1,4 @@
-path: yolo_dataset_v2
+path: data/yolo_dataset_v2
 train: images/train
 val: images/val
 # test: images/test

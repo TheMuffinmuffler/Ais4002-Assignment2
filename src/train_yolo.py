@@ -8,9 +8,9 @@ def train_yolo(data_yaml="data.yaml", experiment_name="yolo11_experiment"):
     device = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
     print(f"Using device: {device}")
 
-    # Initialize the YOLO11 model using pretrained 'nano' weights
+    # Initialize the YOLO11 model using pretrained 'small' weights
     # Pretrained weights provide a 'head start' so the model learns faster
-    model = YOLO("yolo11n.pt")
+    model = YOLO("yolo11s.pt")
 
     # Start the training process with the following configuration:
     # data: Points to your data.yaml which defines image paths and class names
