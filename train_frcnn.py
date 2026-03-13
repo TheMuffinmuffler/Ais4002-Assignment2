@@ -78,7 +78,7 @@ def get_transform():
     ])
 
 # 3. EPOCH TRAINING: Processes one full pass of the data
-def train_one_epoch(model, optimizer, data_loader, device, epoch):
+def train_one_epoch(model, optimizer, data_loader, device, epoch, scaler):
     model.train() # Put the model in training mode (enables gradient tracking)
     total_loss = 0
     
@@ -88,14 +88,17 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch):
         images = list(image.to(device) for image in images)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
-        # Calculate the four types of loss (Classification, Bbox, RPN Bbox, RPN Objectness)
-        loss_dict = model(images, targets)
-        losses = sum(loss for loss in loss_dict.values()) # Sum all losses
+        # Use Automatic Mixed Precision (AMP) for faster training
+        with torch.amp.autocast(device_type=device.type):
+            # Calculate the four types of loss
+            loss_dict = model(images, targets)
+            losses = sum(loss for loss in loss_dict.values())
 
-        # BACKPROPAGATION: The core of the learning process
-        optimizer.zero_grad() # Clear any previous gradients
-        losses.backward() # Compute new gradients based on current loss
-        optimizer.step() # Update model weights to reduce the loss
+        # BACKPROPAGATION with AMP Scaler
+        optimizer.zero_grad()
+        scaler.scale(losses).backward()
+        scaler.step(optimizer)
+        scaler.update()
         
         total_loss += losses.item()
         
@@ -106,9 +109,12 @@ def main():
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     print(f"Using device: {device}")
 
+    # Scaler for AMP
+    scaler = torch.amp.GradScaler(enabled=(device.type == 'cuda'))
+
     # Initialize the dataset using the COCO-formatted folder we set up
     dataset = CocoDataset(
-        root='coco_dataset/images',
+        root='coco_dataset',
         annFile='coco_dataset/result.json',
         transforms=get_transform()
     )
@@ -122,7 +128,8 @@ def main():
         dataset, 
         batch_size=4, # Set to 4 to save memory; can be increased to 8 or 12 on 3070 Ti
         shuffle=True, 
-        num_workers=0, 
+        num_workers=0,
+        pin_memory=True,
         collate_fn=collate_fn
     )
 
@@ -150,7 +157,7 @@ def main():
     print(f"Starting training for {num_epochs} epochs...")
     
     for epoch in range(num_epochs):
-        train_one_epoch(model, optimizer, data_loader, device, epoch)
+        train_one_epoch(model, optimizer, data_loader, device, epoch, scaler)
         lr_scheduler.step() # Update the learning rate
         
         # Save the model state as a checkpoint (move these back to Mac for testing)

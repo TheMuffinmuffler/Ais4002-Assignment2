@@ -1,3 +1,8 @@
+# IDEs
+.idea/
+.vscode/
+.DS_Store
+
 # Python
 __pycache__/
 *.py[cod]
@@ -8,19 +13,21 @@ env/
 build/
 dist/
 
-# IDEs
-.idea/
-.vscode/
-.DS_Store
-
-# Data & Models (Optional: exclude if they are very large)
-# dataset/
-# coco_dataset/
-*.pth
-*.pt
-*.onnx
-runs/
-
-# Large files
+# Dataset Caches and large files
+*.cache
 *.log
 *.sqlite
+
+# Models and results (Large folders)
+runs/
+failure_analysis/
+coco_dataset/
+dataset/
+
+# Checkpoints (Exclude all intermediate .pth and .pt)
+*.pth
+*.pt
+
+
+# Explicitly UN-IGNORE (Keep) only the important final models
+

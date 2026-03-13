@@ -22,7 +22,7 @@ def train_yolo():
         data="data.yaml", 
         epochs=100, 
         imgsz=640, 
-        batch=16, 
+        batch=16,
         device=device,
         name="yolo11_experiment"
     )

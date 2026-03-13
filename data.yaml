@@ -1,4 +1,4 @@
-path: /Users/william/PycharmProjects/OenCV_intelegent_Machines/dataset
+path: dataset
 train: images/train
 val: images/val
 # test: images/test
