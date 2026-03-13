@@ -104,18 +104,30 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, scaler):
         
     print(f"Epoch: [{epoch}] - Average Loss: {total_loss / len(data_loader):.4f}")
 
-def main():
+import argparse
+import os
+import torch
+...
+def train_one_epoch(model, optimizer, data_loader, device, epoch, scaler):
+...
+    print(f"Epoch: [{epoch}] - Average Loss: {total_loss / len(data_loader):.4f}")
+
+def train_frcnn(dataset_root='coco_dataset', ann_file='coco_dataset/result.json', experiment_name='frcnn_experiment'):
     # Detect if NVIDIA CUDA is available (Optimized for your 3070 Ti)
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     print(f"Using device: {device}")
+
+    # Create output directory
+    output_dir = os.path.join('runs', 'frcnn', experiment_name)
+    os.makedirs(output_dir, exist_ok=True)
 
     # Scaler for AMP
     scaler = torch.amp.GradScaler(enabled=(device.type == 'cuda'))
 
     # Initialize the dataset using the COCO-formatted folder we set up
     dataset = CocoDataset(
-        root='coco_dataset',
-        annFile='coco_dataset/result.json',
+        root=dataset_root,
+        annFile=ann_file,
         transforms=get_transform()
     )
     
@@ -160,11 +172,21 @@ def main():
         train_one_epoch(model, optimizer, data_loader, device, epoch, scaler)
         lr_scheduler.step() # Update the learning rate
         
-        # Save the model state as a checkpoint (move these back to Mac for testing)
-        torch.save(model.state_dict(), f"faster_rcnn_epoch_{epoch}.pth")
-        print(f"Model saved: faster_rcnn_epoch_{epoch}.pth")
+        # Save the model state as a checkpoint
+        checkpoint_path = os.path.join(output_dir, f"faster_rcnn_epoch_{epoch}.pth")
+        torch.save(model.state_dict(), checkpoint_path)
+        print(f"Model saved: {checkpoint_path}")
 
-    print("Training complete! Your weights (.pth) are ready for testing.")
+    # Save final model
+    final_path = os.path.join(output_dir, "best.pth")
+    torch.save(model.state_dict(), final_path)
+    print(f"Training complete! Final model saved: {final_path}")
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Train Faster R-CNN")
+    parser.add_argument("--root", type=str, default="coco_dataset", help="Dataset root directory")
+    parser.add_argument("--ann", type=str, default="coco_dataset/result.json", help="Annotation file path")
+    parser.add_argument("--name", type=str, default="frcnn_experiment", help="Experiment name")
+    args = parser.parse_args()
+    
+    train_frcnn(dataset_root=args.root, ann_file=args.ann, experiment_name=args.name)

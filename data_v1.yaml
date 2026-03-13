@@ -1,0 +1,14 @@
+path: yolo_dataset_v1
+train: images/train
+val: images/val
+# test: images/test
+
+names:
+  0: Battery Fully Charged Lemon Yuzu
+  1: Burn Original
+  2: Monster Juiced Aussie Lemonade
+  3: Monster Juiced Mango Loco
+  4: Monster Juiced Monarch
+  5: Monster Ultra Peachy Keen
+  6: Monster Ultra Strawberry Dreams
+  7: Monster Ultra White
