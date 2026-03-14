@@ -2,6 +2,10 @@ import polars as pl
 import matplotlib.pyplot as plt
 import os
 
+# Fix working directory if run from src/
+if os.path.basename(os.getcwd()) == 'src':
+    os.chdir('..')
+
 # 1. HARDCODED FRCNN RESULTS (Extracted from the validated training logs)
 # Dataset V1
 frcnn_v1 = {
@@ -36,8 +40,13 @@ def get_best_yolo(csv_path):
         "training_time": df['time'].sum() / 60  # total time in minutes
     }
 
-yolo_v1 = get_best_yolo("runs/detect/yolo_v1_small/results.csv")
-yolo_v2 = get_best_yolo("runs/detect/yolo_v2_large/results.csv")
+yolo_v1 = get_best_yolo(os.path.join("runs", "detect", "yolo_v1_small", "results.csv"))
+yolo_v2 = get_best_yolo(os.path.join("runs", "detect", "yolo_v2_large", "results.csv"))
+
+# Check if we found the data
+if yolo_v1 is None or yolo_v2 is None:
+    print("ERROR: Could not find YOLO results. Did you run the training first?")
+    exit(1)
 
 # 3. PREPARE DATA FOR PLOTTING
 labels = ['V1 Baseline', 'V2 Scaled']
@@ -77,9 +86,9 @@ for i, v in enumerate(yolo_map_range): plt.text(i - width/2, v + 0.02, f'{v:.2f}
 for i, v in enumerate(frcnn_map_range): plt.text(i + width/2, v + 0.02, f'{v:.2f}', ha='center')
 
 plt.tight_layout()
-os.makedirs('comparison_results', exist_ok=True)
-plt.savefig('comparison_results/final_comparison.png')
-print("Comparison plot saved to 'comparison_results/final_comparison.png'")
+os.makedirs('final_report_assets', exist_ok=True)
+plt.savefig('final_report_assets/comparison_accuracy.png')
+print("Comparison plot saved to 'final_report_assets/comparison_accuracy.png'")
 
 # Plot 3: Training Time
 plt.figure(figsize=(8, 5))
@@ -93,5 +102,5 @@ plt.xticks(x, labels)
 plt.legend()
 for i, v in enumerate(times_yolo): plt.text(i - width/2, v + 0.1, f'{v:.1f}m', ha='center')
 for i, v in enumerate(times_frcnn): plt.text(i + width/2, v + 0.1, f'{v:.1f}m', ha='center')
-plt.savefig('comparison_results/time_comparison.png')
-print("Time comparison plot saved to 'comparison_results/time_comparison.png'")
+plt.savefig('final_report_assets/comparison_time.png')
+print("Time comparison plot saved to 'final_report_assets/comparison_time.png'")

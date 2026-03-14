@@ -1,6 +1,10 @@
 import polars as pl
 import os
 
+# Fix working directory if run from src/
+if os.path.basename(os.getcwd()) == 'src':
+    os.chdir('..')
+
 def get_best_yolo(csv_path):
     if not os.path.exists(csv_path): return {"mAP50": 0, "mAP50-95": 0, "time": 0}
     df = pl.read_csv(csv_path)
@@ -9,8 +13,8 @@ def get_best_yolo(csv_path):
     return {"mAP50": best["metrics/mAP50(B)"], "mAP50-95": best["metrics/mAP50-95(B)"], "time": df["time"].sum() / 60}
 
 # Data Gathering
-yolo_v1 = get_best_yolo("runs/detect/yolo_v1_small/results.csv")
-yolo_v2 = get_best_yolo("runs/detect/yolo_v2_large4/results.csv")
+yolo_v1 = get_best_yolo(os.path.join("runs", "detect", "yolo_v1_small", "results.csv"))
+yolo_v2 = get_best_yolo(os.path.join("runs", "detect", "yolo_v2_large", "results.csv"))
 
 # FRCNN Results (from our validated logs)
 frcnn_v1 = {"mAP50": 0.564, "mAP50-95": 0.457, "time": 4.06}

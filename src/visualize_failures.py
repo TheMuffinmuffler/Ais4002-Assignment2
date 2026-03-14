@@ -3,10 +3,14 @@ import cv2
 import os
 import glob
 
+# Fix working directory if run from src/
+if os.path.basename(os.getcwd()) == 'src':
+    os.chdir('..')
+
 # Identify the best models
-yolo_model_path = "runs/detect/yolo_v2_large4/weights/best.pt"
-val_images_path = "yolo_dataset_v2/images/val/*.jpg" # or whatever your images are
-output_dir = "failure_analysis"
+yolo_model_path = "runs/detect/yolo_v2_large/weights/best.pt"
+val_images_path = "data/yolo_dataset_v2/images/val/*.jpg" # or whatever your images are
+output_dir = "final_report_assets/failures"
 os.makedirs(output_dir, exist_ok=True)
 
 print("\nRunning Failure Analysis for YOLO...")

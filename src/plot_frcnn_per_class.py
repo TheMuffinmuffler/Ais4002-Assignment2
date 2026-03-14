@@ -7,7 +7,16 @@ from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
 import matplotlib.pyplot as plt
 import os
-from train_frcnn import CocoDataset, get_transform
+
+import sys
+
+# Fix working directory if run from src/
+if os.path.basename(os.getcwd()) == 'src':
+    os.chdir('..')
+
+# Add src to path so we can import from it
+sys.path.append(os.getcwd())
+from src.train_frcnn import CocoDataset, get_transform
 
 def evaluate_per_class(model_path, dataset_root, ann_file):
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -78,13 +87,13 @@ def evaluate_per_class(model_path, dataset_root, ann_file):
         plt.text(v + 0.01, i, f'{v:.3f}', va='center')
 
     plt.tight_layout()
-    os.makedirs('comparison_results', exist_ok=True)
-    plt.savefig('comparison_results/frcnn_per_class.png')
-    print("Per-class plot saved to 'comparison_results/frcnn_per_class.png'")
+    os.makedirs('final_report_assets', exist_ok=True)
+    plt.savefig('final_report_assets/frcnn_per_class.png')
+    print("Per-class plot saved to 'final_report_assets/frcnn_per_class.png'")
 
 if __name__ == "__main__":
     evaluate_per_class(
         model_path="runs/frcnn/frcnn_v2_validated/best.pth",
-        dataset_root="coco_dataset_v2",
-        ann_file="coco_dataset_v2/val.json"
+        dataset_root="data/coco_dataset_v2",
+        ann_file="data/coco_dataset_v2/val.json"
     )
