@@ -22,10 +22,11 @@ def evaluate_per_class(model_path, dataset_root, ann_file):
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     
     # Load model
-    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(weights=None)
-    num_classes = 9 
-    in_features = model.roi_heads.box_predictor.cls_score.in_features
-    model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
+    # We use weights_backbone=None to avoid downloading from the internet
+    from torchvision.models.detection.backbone_utils import resnet_fpn_backbone
+    backbone = resnet_fpn_backbone('resnet50', weights=None, trainable_layers=0)
+    model = torchvision.models.detection.FasterRCNN(backbone, num_classes=9)
+    
     model.load_state_dict(torch.load(model_path, map_location=device, weights_only=True))
     model.to(device)
     model.eval()

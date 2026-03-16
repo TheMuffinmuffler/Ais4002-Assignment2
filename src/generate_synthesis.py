@@ -9,8 +9,14 @@ def get_best_yolo(csv_path):
     if not os.path.exists(csv_path): return {"mAP50": 0, "mAP50-95": 0, "time": 0}
     df = pl.read_csv(csv_path)
     df = df.rename({c: c.strip() for c in df.columns})
-    best = df.filter(pl.col("metrics/mAP50(B)") == df["metrics/mAP50(B)"].max()).row(0, named=True)
-    return {"mAP50": best["metrics/mAP50(B)"], "mAP50-95": best["metrics/mAP50-95(B)"], "time": df["time"].sum() / 60}
+    
+    # Get the best mAP50
+    best_row = df.filter(pl.col("metrics/mAP50(B)") == df["metrics/mAP50(B)"].max()).row(0, named=True)
+    
+    # YOLO 'time' column is cumulative, so the last row's value is the total time in seconds
+    total_time_min = df["time"].max() / 60
+    
+    return {"mAP50": best_row["metrics/mAP50(B)"], "mAP50-95": best_row["metrics/mAP50-95(B)"], "time": total_time_min}
 
 # Data Gathering
 yolo_v1 = get_best_yolo(os.path.join("runs", "detect", "yolo_v1_small", "results.csv"))
