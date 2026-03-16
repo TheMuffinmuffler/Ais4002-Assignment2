@@ -1,7 +1,7 @@
 import os
 import shutil
 
-# Fix working directory if run from src/
+
 if os.path.basename(os.getcwd()) == 'src':
     os.chdir('..')
 

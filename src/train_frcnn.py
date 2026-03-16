@@ -12,7 +12,6 @@ import argparse
 import matplotlib.pyplot as plt
 import numpy as np
 
-# 1. CUSTOM DATASET CLASS
 class CocoDataset(CocoDetection):
     def __init__(self, root, annFile, transforms=None):
         super(CocoDataset, self).__init__(root, annFile)
@@ -20,7 +19,6 @@ class CocoDataset(CocoDetection):
 
     def __getitem__(self, idx):
         img, target = super(CocoDataset, self).__getitem__(idx)
-        # Use the actual COCO image ID instead of the index
         image_id = torch.tensor([self.ids[idx]])
         boxes = []
         labels = []
@@ -85,6 +83,7 @@ def evaluate(model, data_loader, device, ann_file):
         for i, output in enumerate(outputs):
             image_id = targets[i]['image_id'].item()
             # Convert internal labels back to original category IDs (subtract 1)
+            # COCO saves background as index 0
             boxes = output['boxes'].cpu().numpy()
             scores = output['scores'].cpu().numpy()
             labels = output['labels'].cpu().numpy() - 1
@@ -108,8 +107,7 @@ def evaluate(model, data_loader, device, ann_file):
     coco_eval.evaluate()
     coco_eval.accumulate()
     coco_eval.summarize()
-    
-    # Return mAP @ IoU=0.50:0.95 (first element in stats)
+
     return coco_eval.stats[0]
 
 def train_frcnn(dataset_root='coco_dataset', train_ann='coco_dataset/train.json', val_ann='coco_dataset/val.json', experiment_name='frcnn_experiment'):
@@ -151,9 +149,8 @@ def train_frcnn(dataset_root='coco_dataset', train_ann='coco_dataset/train.json'
         mAP = evaluate(model, val_loader, device, val_ann)
         map_history.append(mAP)
 
-        # We only save the final model at the end to keep project size small
+        # Only saves the last model to save space
 
-    # Plot results
     fig, ax1 = plt.subplots(figsize=(10, 5))
     ax1.set_xlabel('Epoch')
     ax1.set_ylabel('Loss', color='tab:red')

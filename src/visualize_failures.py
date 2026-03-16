@@ -3,13 +3,13 @@ import cv2
 import os
 import glob
 
-# Fix working directory if run from src/
+
 if os.path.basename(os.getcwd()) == 'src':
     os.chdir('..')
 
-# Identify the best models
+
 yolo_model_path = "runs/detect/yolo_v2_large/weights/best.pt"
-val_images_path = "data/yolo_dataset_v2/images/val/*.jpg" # or whatever your images are
+val_images_path = "data/yolo_dataset_v2/images/val/*.jpg"
 output_dir = "final_report_assets/failures"
 os.makedirs(output_dir, exist_ok=True)
 
@@ -17,11 +17,10 @@ print("\nRunning Failure Analysis for YOLO...")
 model = YOLO(yolo_model_path)
 images = glob.glob(val_images_path)
 
-# Limit to first 20 to avoid over-processing
+
 for img_path in images[:20]:
     results = model(img_path, verbose=False)
     for r in results:
-        # Check if model has low confidence detections (< 0.6)
         low_conf = [box for box in r.boxes if box.conf < 0.6]
         if low_conf:
             name = os.path.basename(img_path)

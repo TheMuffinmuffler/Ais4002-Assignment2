@@ -1,7 +1,7 @@
 import polars as pl
 import os
 
-# Fix working directory if run from src/
+
 if os.path.basename(os.getcwd()) == 'src':
     os.chdir('..')
 
@@ -22,7 +22,7 @@ def get_best_yolo(csv_path):
 yolo_v1 = get_best_yolo(os.path.join("runs", "detect", "yolo_v1_small", "results.csv"))
 yolo_v2 = get_best_yolo(os.path.join("runs", "detect", "yolo_v2_large", "results.csv"))
 
-# FRCNN Results (from our validated logs)
+# FRCNN Results from validated logs
 frcnn_v1 = {"mAP50": 0.564, "mAP50-95": 0.457, "time": 4.06}
 frcnn_v2 = {"mAP50": 0.957, "mAP50-95": 0.771, "time": 9.56}
 

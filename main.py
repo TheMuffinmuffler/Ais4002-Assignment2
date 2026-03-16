@@ -31,7 +31,6 @@ def run_training(script_name, args, description):
     time.sleep(5)
 
 def main():
-    # Update paths to point to the new 'data' directory
     experiments = [
         {
             "script": "train_yolo.py",
